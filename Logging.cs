@@ -10,7 +10,8 @@
  * -public variables have been set for all private variables that need to be accessed.
  * -LOG_LEVEL made private again. Created a public version with get/set and set will fallback to more verbose if an int is passed that cannot be converted to the iLogLevel enum type.
  * -LogLevels are also now enforced.
- * 
+ * -Added an overload for Log() that accepts the loglevel in the form of an int.
+ * -Added an overload for FormatLogLine() that accepts the loglevel in the form of an int.
  * 06-12-2013 - Keith Olenchak
  * -Added iLogLevel enum.
  * -Added szLogLevel list to convert loglevel to a string.
@@ -174,7 +175,6 @@ namespace qqLogs
         /// <summary>
         /// Log a message to specifieced log file at the specified log level.
         /// </summary>
-        /// <param name="filename">Name of log file including extention.</param>
         /// <param name="logLevel">Log level to log this message at.</param>
         /// <param name="data">Message to be logged.</param>
         /// <param name="pre_fix">Optional string to prefix the log line with.</param>
@@ -233,6 +233,66 @@ namespace qqLogs
             }
         }
 
+        /// <summary>
+        /// Log a message to specifieced log file at the specified log level.
+        /// </summary>
+        /// <param name="logLevel">Log level to log this message at.</param>
+        /// <param name="data">Message to be logged.</param>
+        /// <param name="pre_fix">Optional string to prefix the log line with.</param>
+        /// <param name="overwrite">Optional. If true the log file will be overwritten with the new data.</param>
+        public void Log(int logLevel, string data, string pre_fix = null, bool overwrite = false)
+        {
+            lock (_custom)
+            {
+                FileInfo fi = new FileInfo(this.logRoot + this.logName);
+                StreamWriter sw;
+                try
+                {
+                    if (!Directory.Exists(this.logRoot))
+                        Directory.CreateDirectory(this.logRoot);
+                    if (overwrite)
+                    {
+                        fi.Delete();
+                        sw = fi.CreateText();
+                    }
+                    else
+                    {
+                        if (fi.Exists && !overwrite)
+                        {
+                            if (fi.Length > Log_Size_Limit)
+                            {
+                                fi.CopyTo(string.Format("{0}{1}_{2}{3}", new object[] { this.logRoot, this.logName, DateTime.Now.ToString(), this.oldLogExtention }), true);
+                                fi.Delete();
+                                this.CheckNumberofOldLogs();
+                            }
+                        }
+                        sw = fi.AppendText();
+                    }
+                    if (!fi.Exists)
+                    {
+                        sw.WriteLine(this.FormatLogLine(0, "File Created", null));
+                    }
+                    if (logLevel >= (int)this.LOG_LEVEL)
+                    {
+                        sw.WriteLine(this.FormatLogLine(logLevel, data, pre_fix));
+                    }
+                    sw.Close();
+                    sw.Dispose();
+                }
+                catch (UnauthorizedAccessException e)
+                {
+                    MessageBox.Show("UnauthorizedAccessException caught in qqlogs: " + e.Message, "Unauthorized Access Exception", MessageBoxButtons.OK);
+                }
+                catch (IOException e)
+                {
+                    MessageBox.Show("IOException caught in qqlogs: " + e.Message, "Generic IO Exception", MessageBoxButtons.OK);
+                }
+                catch (Exception e)
+                {
+                    MessageBox.Show("Generic Exception caught in qqlogs: " + e.Message, "Generic Exception", MessageBoxButtons.OK);
+                }
+            }
+        }
 
         private string FormatLogLine(iLogLevel _logLevel, string _Message, string preFix)
         {
@@ -248,6 +308,32 @@ namespace qqLogs
             if (logLine.Contains("%szLogLevel%"))
             {
                 logLine.Replace("%szLogLevel%", szLogLevel[(int)_logLevel]);
+            }
+            if (logLine.Contains("%LogLevel%"))
+            {
+                logLine.Replace("%LogLevel%", _logLevel.ToString());
+            }
+            if (logLine.Contains("%Message%"))
+            {
+                logLine.Replace("%Message%", _Message);
+            }
+            return logLine;
+        }
+
+        private string FormatLogLine(int _logLevel, string _Message, string preFix)
+        {
+            string logLine = this.logLineFormat;
+            if (preFix != null && preFix != string.Empty)
+            {
+                logLine = string.Format("{0}{1}", preFix, logLine);
+            }
+            if (logLine.Contains("%DateTime%"))
+            {
+                logLine.Replace("%DateTime%", DateTime.Now.ToString());
+            }
+            if (logLine.Contains("%szLogLevel%"))
+            {
+                logLine.Replace("%szLogLevel%", szLogLevel[_logLevel]);
             }
             if (logLine.Contains("%LogLevel%"))
             {
