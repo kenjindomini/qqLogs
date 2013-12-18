@@ -6,6 +6,8 @@
  * -Made mehtods non-static
  * -Added 3 class initializers.
  * -Log line format can be set and will be adhered to even for the "file created" line.
+ * -checks if the number of old logs exceeds the value of old logs to keep.
+ * -public variables have been set for all private variables that need to be accessed.
  * 
  * 06-12-2013 - Keith Olenchak
  * -Added iLogLevel enum.
@@ -27,65 +29,57 @@ using System;
 using System.IO;
 using System.Windows.Forms;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace qqLogs
 {
+    public enum iLogLevel : int { DEBUG = 0, INFO = 2, WARNING = 4, ERROR = 6, EXCEPTION = 8, FATALEXCEPTION = 10 };
     public class Logging
     {
-        private int LOG_LEVEL = 0;
-        private long Log_Size_Limit = 102400;
-        private uint numberOfOldLogsToKeep = 1; //not implemented yet.
-        private readonly object _qqsync = new object();
-        private readonly object _custom = new object();
+        public iLogLevel LOG_LEVEL = iLogLevel.DEBUG;
+        public long Log_Size_Limit = 102400;
+        public uint numberOfOldLogsToKeep = 1;
         private string logLineFormat = "%DateTime% - [%szLogLevel%] - %Message%";
         private string logRoot = "logs/";
-        private string oldLogExtentionBase = ".bak";
+        private string oldLogExtention = ".bak";
+        private string logName = "Log";
+        private readonly object _custom = new object();
 
-        public enum iLogLevel : int { DEBUG = 0, INFO = 2, WARNING = 4, ERROR = 6, EXCEPTION = 8, FATALEXCEPTION = 10 };
         public static List<string> szLogLevel = new List<string> { "Debug", "1", "Info", "3", "Warning", "5", "Error", "7", "Exception", "9", "FatalException" };
 
         #region Class Initializers
         /// <summary>
         /// Initialize the logging class with all defaults.
         /// </summary>
-        public Logging()
+        /// <param name="filename">Filename of the log.</param>
+        public Logging(string filename)
         {
+            this.logName = filename;
         }
 
         /// <summary>
         /// Initialize the logging class and set the Log Level property.
         /// </summary>
+        /// <param name="filename">Filename for the log.</param>
         /// <param name="_logLevel">Log Level, value between 0 and 10.</param>
-        /// <exception cref="System.ArgumentOutOfRangeException">Thrown when _logLevel is not between 0 and 10.</exception>
-        public Logging(int _logLevel)
+        public Logging(string filename, iLogLevel _logLevel)
         {
-            if (_logLevel >= 0 && _logLevel < 11)
-            {
-                this.LOG_LEVEL = _logLevel;
-            }
-            else
-            {
-                throw new ArgumentOutOfRangeException("_logLevel", "Log Level must be a value between 0 and 10.");
-            }
+            this.logName = filename;
+            this.LOG_LEVEL = _logLevel;
         }
 
         /// <summary>
         /// Initialize the logging class and set LogLevel, Log Size Limit, and Number of Old Logs to Keep.
         /// </summary>
-        /// <param name="_logLevel">Log Level, value between 0 and 10.</param>
+        /// <param name="filename">Filename of the log.</param>
+        /// <param name="_logLevel">iLogLevel value.</param>
         /// <param name="_logSizeLimit">Log Size Limit in Bytes.</param>
         /// <param name="_numberOfOldLogsToKeep">How many old logs would you like to keep around.</param>
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
-        public Logging(int _logLevel, long _logSizeLimit, uint _numberOfOldLogsToKeep)
+        public Logging(string filename, iLogLevel _logLevel, long _logSizeLimit, uint _numberOfOldLogsToKeep)
         {
-            if (_logLevel >= 0 && _logLevel < 11)
-            {
-                this.LOG_LEVEL = _logLevel;
-            }
-            else
-            {
-                throw new ArgumentOutOfRangeException("_logLevel", "Log Level must be a value between 0 and 10.");
-            }
+            this.logName = filename;
+            this.LOG_LEVEL = _logLevel;
             if (_logSizeLimit >= 0)
             {
                 this.Log_Size_Limit = _logSizeLimit;
@@ -98,20 +92,6 @@ namespace qqLogs
         }
         #endregion
         #region GetSets for Private Properties
-        public int Log_Level
-        {
-            get
-            {
-                return this.LOG_LEVEL;
-            }
-            set
-            {
-                if (value >= 0 && value < 11)
-                {
-                    this.LOG_LEVEL = value;
-                }
-            }
-        }
         public string Log_Line_Format
         {
             get
@@ -130,6 +110,42 @@ namespace qqLogs
                 }
             }
         }
+        public string Log_Root
+        {
+            get
+            {
+                return this.logRoot;
+            }
+            set
+            {
+                if (!value.EndsWith("/"))
+                {
+                    this.logRoot = string.Format("{0}/", value);
+                }
+                else
+                {
+                    this.logRoot = value;
+                }
+            }
+        }
+        public string Old_Log_Extention
+        {
+            get
+            {
+                return this.oldLogExtention;
+            }
+            set
+            {
+                if (!value.StartsWith("."))
+                {
+                    this.oldLogExtention = string.Format(".{0}", value);
+                }
+                else
+                {
+                    this.oldLogExtention = value;
+                }
+            }
+        }
         #endregion
         /// <summary>
         /// Log a message to specifieced log file at the specified log level.
@@ -139,11 +155,11 @@ namespace qqLogs
         /// <param name="data">Message to be logged.</param>
         /// <param name="pre_fix">Optional string to prefix the log line with.</param>
         /// <param name="overwrite">Optional. If true the log file will be overwritten with the new data.</param>
-        public void Log(string filename, iLogLevel logLevel, string data, string pre_fix = null, bool overwrite = false)
+        public void Log(iLogLevel logLevel, string data, string pre_fix = null, bool overwrite = false)
         {
             lock (_custom)
             {
-                FileInfo fi = new FileInfo(this.logRoot + filename);
+                FileInfo fi = new FileInfo(this.logRoot + this.logName);
                 StreamWriter sw;
                 try
                 {
@@ -160,8 +176,9 @@ namespace qqLogs
                         {
                             if (fi.Length > Log_Size_Limit)
                             {
-                                fi.CopyTo(this.logRoot + filename + this.oldLogExtentionBase, true);
+                                fi.CopyTo(string.Format("{0}{1}_{2}{3}",new object[]{this.logRoot, this.logName, DateTime.Now.ToString(), this.oldLogExtention}), true);
                                 fi.Delete();
+                                this.CheckNumberofOldLogs();
                             }
                         }
                         sw = fi.AppendText();
@@ -176,15 +193,15 @@ namespace qqLogs
                 }
                 catch (UnauthorizedAccessException e)
                 {
-                    MessageBox.Show("UnauthorizedAccessException caught in QuasarQode.logs: " + e.Message, "Unauthorized Access Exception", MessageBoxButtons.OK);
+                    MessageBox.Show("UnauthorizedAccessException caught in qqlogs: " + e.Message, "Unauthorized Access Exception", MessageBoxButtons.OK);
                 }
                 catch (IOException e)
                 {
-                    MessageBox.Show("IOException caught in QuasarQode.logs: " + e.Message, "Generic IO Exception", MessageBoxButtons.OK);
+                    MessageBox.Show("IOException caught in qqlogs: " + e.Message, "Generic IO Exception", MessageBoxButtons.OK);
                 }
                 catch (Exception e)
                 {
-                    MessageBox.Show("Generic Exception caught in QuasarQode.logs: " + e.Message, "Generic Exception", MessageBoxButtons.OK);
+                    MessageBox.Show("Generic Exception caught in qqlogs: " + e.Message, "Generic Exception", MessageBoxButtons.OK);
                 }
             }
         }
@@ -213,6 +230,29 @@ namespace qqLogs
                 logLine.Replace("%Message%", _Message);
             }
             return logLine;
+        }
+        private void CheckNumberofOldLogs()
+        {
+            DirectoryInfo logroot = new DirectoryInfo(string.Format("{0}{1}", ".", this.logRoot));
+            var logfiles = from files in logroot.EnumerateFiles(string.Format("{0}*{1}", this.logName, this.oldLogExtention))
+                           orderby files.CreationTime
+                           select files;
+            if (logfiles != null && logfiles.Any())
+            {
+                int numberOfOldLogs = logfiles.Count();
+                if (numberOfOldLogs > this.numberOfOldLogsToKeep)
+                {
+                    try
+                    {
+                        FileInfo oldestlog = logfiles.ElementAt(0);
+                        oldestlog.Delete();
+                    }
+                    catch (Exception e)
+                    {
+                        MessageBox.Show("Generic Exception caught in qqlogs: " + e.Message, "Generic Exception", MessageBoxButtons.OK);
+                    }
+                }
+            }
         }
     }
 }
