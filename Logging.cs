@@ -131,10 +131,16 @@ namespace qqLogs
             }
         }
         #endregion
-        
-        public int Log(string filename, int logLevel, string data, string pre_fix = null, bool overwrite = false)
+        /// <summary>
+        /// Log a message to specifieced log file at the specified log level.
+        /// </summary>
+        /// <param name="filename">Name of log file including extention.</param>
+        /// <param name="logLevel">Log level to log this message at.</param>
+        /// <param name="data">Message to be logged.</param>
+        /// <param name="pre_fix">Optional string to prefix the log line with.</param>
+        /// <param name="overwrite">Optional. If true the log file will be overwritten with the new data.</param>
+        public void Log(string filename, iLogLevel logLevel, string data, string pre_fix = null, bool overwrite = false)
         {
-            int RetVal = 0;
             lock (_custom)
             {
                 FileInfo fi = new FileInfo(this.logRoot + filename);
@@ -171,23 +177,19 @@ namespace qqLogs
                 catch (UnauthorizedAccessException e)
                 {
                     MessageBox.Show("UnauthorizedAccessException caught in QuasarQode.logs: " + e.Message, "Unauthorized Access Exception", MessageBoxButtons.OK);
-                    RetVal = 1001;
                 }
                 catch (IOException e)
                 {
                     MessageBox.Show("IOException caught in QuasarQode.logs: " + e.Message, "Generic IO Exception", MessageBoxButtons.OK);
-                    RetVal = 1002;
                 }
                 catch (Exception e)
                 {
                     MessageBox.Show("Generic Exception caught in QuasarQode.logs: " + e.Message, "Generic Exception", MessageBoxButtons.OK);
-                    RetVal = 1003;
                 }
             }
-            return RetVal;
         }
 
-        private string FormatLogLine(int _logLevel, string _Message, string preFix)
+        private string FormatLogLine(iLogLevel _logLevel, string _Message, string preFix)
         {
             string logLine = this.logLineFormat;
             if (preFix != null && preFix != string.Empty)
@@ -200,7 +202,7 @@ namespace qqLogs
             }
             if (logLine.Contains("%szLogLevel%"))
             {
-                logLine.Replace("%szLogLevel%", szLogLevel[_logLevel]);
+                logLine.Replace("%szLogLevel%", szLogLevel[(int)_logLevel]);
             }
             if (logLine.Contains("%LogLevel%"))
             {
