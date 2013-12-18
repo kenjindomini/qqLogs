@@ -1,10 +1,11 @@
 ﻿/* Logging.cs
- * QuasarQode logging Library v0.5
+ * QuasarQode logging Library
  * 
  * 18-12-2013 - Keith Olenchak
  * -Started converting this in to a Library.
  * -Made mehtods non-static
  * -Added 3 class initializers.
+ * -Log line format can be set and will be adhered to even for the "file created" line.
  * 
  * 06-12-2013 - Keith Olenchak
  * -Added iLogLevel enum.
@@ -36,7 +37,9 @@ namespace qqLogs
         private uint numberOfOldLogsToKeep = 1; //not implemented yet.
         private readonly object _qqsync = new object();
         private readonly object _custom = new object();
-        private string logLineFormat = null; //not implemented yet.
+        private string logLineFormat = "%DateTime% - [%szLogLevel%] - %Message%";
+        private string logRoot = "logs/";
+        private string oldLogExtentionBase = ".bak";
 
         public enum iLogLevel : int { DEBUG = 0, INFO = 2, WARNING = 4, ERROR = 6, EXCEPTION = 8, FATALEXCEPTION = 10 };
         public static List<string> szLogLevel = new List<string> { "Debug", "1", "Info", "3", "Warning", "5", "Error", "7", "Exception", "9", "FatalException" };
@@ -109,19 +112,37 @@ namespace qqLogs
                 }
             }
         }
+        public string Log_Line_Format
+        {
+            get
+            {
+                return this.logLineFormat;
+            }
+            set
+            {
+                if (!value.Contains("%Message%"))
+                {
+                    this.logLineFormat = string.Format("{0} {1}", value, "%Message%");
+                }
+                else
+                {
+                    this.logLineFormat = value;
+                }
+            }
+        }
         #endregion
         
-        public int Custom(string filename, string data, string pre_fix = null, bool overwrite = false)
+        public int Log(string filename, int logLevel, string data, string pre_fix = null, bool overwrite = false)
         {
             int RetVal = 0;
             lock (_custom)
             {
-                FileInfo fi = new FileInfo("logs/" + filename);
+                FileInfo fi = new FileInfo(this.logRoot + filename);
                 StreamWriter sw;
                 try
                 {
-                    if (!Directory.Exists("logs"))
-                        Directory.CreateDirectory("logs");
+                    if (!Directory.Exists(this.logRoot))
+                        Directory.CreateDirectory(this.logRoot);
                     if (overwrite)
                     {
                         fi.Delete();
@@ -133,7 +154,7 @@ namespace qqLogs
                         {
                             if (fi.Length > Log_Size_Limit)
                             {
-                                fi.CopyTo("logs/" + filename + ".bak", true);
+                                fi.CopyTo(this.logRoot + filename + this.oldLogExtentionBase, true);
                                 fi.Delete();
                             }
                         }
@@ -141,12 +162,9 @@ namespace qqLogs
                     }
                     if (!fi.Exists)
                     {
-                        sw.WriteLine(DateTime.Now.ToString() + " - [0] - File Created");
+                        sw.WriteLine(this.FormatLogLine(0, "File Created", null));
                     }
-                    if (pre_fix != null)
-                        sw.WriteLine(pre_fix + DateTime.Now.ToString() + " - " + data);
-                    else
-                        sw.WriteLine(DateTime.Now.ToString() + " - " + data);
+                    sw.WriteLine(this.FormatLogLine(logLevel, data, pre_fix));
                     sw.Close();
                     sw.Dispose();
                 }
@@ -167,6 +185,32 @@ namespace qqLogs
                 }
             }
             return RetVal;
+        }
+
+        private string FormatLogLine(int _logLevel, string _Message, string preFix)
+        {
+            string logLine = this.logLineFormat;
+            if (preFix != null && preFix != string.Empty)
+            {
+                logLine = string.Format("{0}{1}", preFix, logLine);
+            }
+            if (logLine.Contains("%DateTime%"))
+            {
+                logLine.Replace("%DateTime%", DateTime.Now.ToString());
+            }
+            if (logLine.Contains("%szLogLevel%"))
+            {
+                logLine.Replace("%szLogLevel%", szLogLevel[_logLevel]);
+            }
+            if (logLine.Contains("%LogLevel%"))
+            {
+                logLine.Replace("%LogLevel%", _logLevel.ToString());
+            }
+            if (logLine.Contains("%Message%"))
+            {
+                logLine.Replace("%Message%", _Message);
+            }
+            return logLine;
         }
     }
 }
