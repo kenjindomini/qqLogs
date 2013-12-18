@@ -8,6 +8,8 @@
  * -Log line format can be set and will be adhered to even for the "file created" line.
  * -checks if the number of old logs exceeds the value of old logs to keep.
  * -public variables have been set for all private variables that need to be accessed.
+ * -LOG_LEVEL made private again. Created a public version with get/set and set will fallback to more verbose if an int is passed that cannot be converted to the iLogLevel enum type.
+ * -LogLevels are also now enforced.
  * 
  * 06-12-2013 - Keith Olenchak
  * -Added iLogLevel enum.
@@ -36,13 +38,13 @@ namespace qqLogs
     public enum iLogLevel : int { DEBUG = 0, INFO = 2, WARNING = 4, ERROR = 6, EXCEPTION = 8, FATALEXCEPTION = 10 };
     public class Logging
     {
-        public iLogLevel LOG_LEVEL = iLogLevel.DEBUG;
         public long Log_Size_Limit = 102400;
         public uint numberOfOldLogsToKeep = 1;
         private string logLineFormat = "%DateTime% - [%szLogLevel%] - %Message%";
         private string logRoot = "logs/";
         private string oldLogExtention = ".bak";
         private string logName = "Log";
+        private iLogLevel LOG_LEVEL = iLogLevel.DEBUG;
         private readonly object _custom = new object();
 
         public static List<string> szLogLevel = new List<string> { "Debug", "1", "Info", "3", "Warning", "5", "Error", "7", "Exception", "9", "FatalException" };
@@ -146,6 +148,28 @@ namespace qqLogs
                 }
             }
         }
+        public int Log_Level
+        {
+            get
+            {
+                return (int)this.LOG_LEVEL;
+            }
+            set
+            {
+                if (Enum.IsDefined(typeof(iLogLevel), value))
+                {
+                    LOG_LEVEL = (iLogLevel)value;
+                }
+                else
+                {
+                    value--;
+                    if (Enum.IsDefined(typeof(iLogLevel), value))
+                    {
+                        LOG_LEVEL = (iLogLevel)value;
+                    }
+                }
+            }
+        }
         #endregion
         /// <summary>
         /// Log a message to specifieced log file at the specified log level.
@@ -187,7 +211,10 @@ namespace qqLogs
                     {
                         sw.WriteLine(this.FormatLogLine(0, "File Created", null));
                     }
-                    sw.WriteLine(this.FormatLogLine(logLevel, data, pre_fix));
+                    if (logLevel >= this.LOG_LEVEL)
+                    {
+                        sw.WriteLine(this.FormatLogLine(logLevel, data, pre_fix));
+                    }
                     sw.Close();
                     sw.Dispose();
                 }
@@ -205,6 +232,7 @@ namespace qqLogs
                 }
             }
         }
+
 
         private string FormatLogLine(iLogLevel _logLevel, string _Message, string preFix)
         {
