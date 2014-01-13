@@ -1,6 +1,9 @@
 ﻿/* Logging.cs
  * QuasarQode logging Library
  * 
+ * 13-01-2014 - Keith Olenchak
+ * -Made a change to the DateTime value that is being appended to the log name when it is copied to a bak file, should fix the "NotSupported" exception.
+ * 
  * 18-12-2013 - Keith Olenchak
  * -Started converting this in to a Library.
  * -Made mehtods non-static
@@ -200,7 +203,7 @@ namespace qqLogs
                         {
                             if (fi.Length > Log_Size_Limit)
                             {
-                                fi.CopyTo(string.Format("{0}{1}_{2}{3}",new object[]{this.logRoot, this.logName, DateTime.Now.ToString(), this.oldLogExtention}), true);
+                                fi.CopyTo(string.Format("{0}{1}_{2}{3}", new object[] { this.logRoot, this.logName, DateTime.Now.ToFileTime().ToString(), this.oldLogExtention }), true);
                                 fi.Delete();
                                 this.CheckNumberofOldLogs();
                             }
@@ -261,7 +264,7 @@ namespace qqLogs
                         {
                             if (fi.Length > Log_Size_Limit)
                             {
-                                fi.CopyTo(string.Format("{0}{1}_{2}{3}", new object[] { this.logRoot, this.logName, DateTime.Now.ToString(), this.oldLogExtention }), true);
+                                fi.CopyTo(string.Format("{0}{1}_{2}{3}", new object[] { this.logRoot, this.logName, DateTime.Now.ToFileTime().ToString(), this.oldLogExtention }), true);
                                 fi.Delete();
                                 this.CheckNumberofOldLogs();
                             }
@@ -301,22 +304,10 @@ namespace qqLogs
             {
                 logLine = string.Format("{0}{1}", preFix, logLine);
             }
-            if (logLine.Contains("%DateTime%"))
-            {
-                logLine.Replace("%DateTime%", DateTime.Now.ToString());
-            }
-            if (logLine.Contains("%szLogLevel%"))
-            {
-                logLine.Replace("%szLogLevel%", szLogLevel[(int)_logLevel]);
-            }
-            if (logLine.Contains("%LogLevel%"))
-            {
-                logLine.Replace("%LogLevel%", _logLevel.ToString());
-            }
-            if (logLine.Contains("%Message%"))
-            {
-                logLine.Replace("%Message%", _Message);
-            }
+            logLine = logLine.Replace("%DateTime%", DateTime.Now.ToString());
+            logLine = logLine.Replace("%szLogLevel%", szLogLevel[(int)_logLevel]);
+            logLine = logLine.Replace("%LogLevel%", _logLevel.ToString());
+            logLine = logLine.Replace("%Message%", _Message);
             return logLine;
         }
 
@@ -327,22 +318,10 @@ namespace qqLogs
             {
                 logLine = string.Format("{0}{1}", preFix, logLine);
             }
-            if (logLine.Contains("%DateTime%"))
-            {
-                logLine.Replace("%DateTime%", DateTime.Now.ToString());
-            }
-            if (logLine.Contains("%szLogLevel%"))
-            {
-                logLine.Replace("%szLogLevel%", szLogLevel[_logLevel]);
-            }
-            if (logLine.Contains("%LogLevel%"))
-            {
-                logLine.Replace("%LogLevel%", _logLevel.ToString());
-            }
-            if (logLine.Contains("%Message%"))
-            {
-                logLine.Replace("%Message%", _Message);
-            }
+            logLine = logLine.Replace("%DateTime%", DateTime.Now.ToString());
+            logLine = logLine.Replace("%szLogLevel%", szLogLevel[_logLevel]);
+            logLine = logLine.Replace("%LogLevel%", _logLevel.ToString());
+            logLine = logLine.Replace("%Message%", _Message);
             return logLine;
         }
         private void CheckNumberofOldLogs()
