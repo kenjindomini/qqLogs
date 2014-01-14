@@ -1,5 +1,7 @@
 ﻿/* Logging.cs
  * QuasarQode logging Library
+ * 14-01-2014 - Keith Olenchak
+ * -Fixed a bug in CheckNumberofOldLogs() that was inserting a "." before the logroot.
  * 
  * 13-01-2014 - Keith Olenchak
  * -Made a change to the DateTime value that is being appended to the log name when it is copied to a bak file, should fix the "NotSupported" exception.
@@ -15,6 +17,7 @@
  * -LogLevels are also now enforced.
  * -Added an overload for Log() that accepts the loglevel in the form of an int.
  * -Added an overload for FormatLogLine() that accepts the loglevel in the form of an int.
+ * 
  * 06-12-2013 - Keith Olenchak
  * -Added iLogLevel enum.
  * -Added szLogLevel list to convert loglevel to a string.
@@ -326,7 +329,7 @@ namespace qqLogs
         }
         private void CheckNumberofOldLogs()
         {
-            DirectoryInfo logroot = new DirectoryInfo(string.Format("{0}{1}", ".", this.logRoot));
+            DirectoryInfo logroot = new DirectoryInfo(this.logRoot);
             var logfiles = from files in logroot.EnumerateFiles(string.Format("{0}*{1}", this.logName, this.oldLogExtention))
                            orderby files.CreationTime
                            select files;
