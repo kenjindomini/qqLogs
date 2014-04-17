@@ -19,7 +19,7 @@ namespace qqLogs
 
         public static List<string> szLogLevel = new List<string> { "Debug", "1", "Info", "3", "Warning", "5", "Error", "7", "Exception", "9", "FatalException" };
 
-        #region Class Initializers
+        /*#region Class Initializers
         /// <summary>
         /// Initialize the logging class with all defaults.
         /// </summary>
@@ -63,6 +63,7 @@ namespace qqLogs
             numberOfOldLogsToKeep = _numberOfOldLogsToKeep;
         }
         #endregion
+         * */
         #region GetSets for Private Properties
         public static string Log_Line_Format
         {
