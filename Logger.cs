@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace qqLogs
 {
-    class Logger
+    public class Logger
     {
         public static long Log_Size_Limit = 102400;
         public static uint numberOfOldLogsToKeep = 1;
