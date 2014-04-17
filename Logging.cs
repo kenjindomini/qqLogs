@@ -52,7 +52,7 @@ namespace qqLogs
         private string oldLogExtention = ".bak";
         private string logName = "Log";
         private iLogLevel LOG_LEVEL = iLogLevel.DEBUG;
-        private readonly object _custom = new object();
+        private static readonly object _custom = new object();
 
         public static List<string> szLogLevel = new List<string> { "Debug", "1", "Info", "3", "Warning", "5", "Error", "7", "Exception", "9", "FatalException" };
 
